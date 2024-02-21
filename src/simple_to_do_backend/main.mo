@@ -1,58 +1,36 @@
-// ToDo projesi
-import Map "mo:base/HashMap";
-import Hash "mo:base/Hash";
-import Nat "mo:base/Nat";
-import Iter "mo:base/Iter";
-import Text "mo:base/Text";
+// SimpleToDo.mo
 
+// Yapılacak işlerin tanımlandığı yapı
+type Todo = {
+    description : Text;
+    completed : Bool;
+};
 
-actor Assistant {
-  
-  type ToDo = {
-    description: Text;
-    completed: Bool;
-  };
+// Yapılacak işleri içeren yapı
+type TodoList = {
+    todos : [Todo];
+};
 
-  // HashMap
-  func natHash(n: Nat): Hash.Hash {
-    Text.hash(Nat.toText(n))
-  };
+// Yeni bir yapılacak iş ekler
+public func addTodo(todoList : TodoList, description : Text) : TodoList {
+    let newTodo = { description = description; completed = false };
+    TodoList { todos = Array.append<Todo>(todoList.todos, [newTodo]) }
+};
 
-  var todos = Map.HashMap< Nat, ToDo >(0, Nat.equal, natHash);
-  var nextId : Nat = 0;
+// Bir yapılacak işin tamamlandığını işaretler
+public func completeTodo(todoList : TodoList, index : Nat) : TodoList {
+    let updatedTodos = Array.update<Todo>(todoList.todos, index - 1, { _ with completed = true });
+    TodoList { todos = updatedTodos }
+};
 
-  public query func getTodos() : async [ToDo] {
-    Iter.toArray(todos.vals());
-  };
-
-  // ID ToDo ataması - sorgu ve tanımlama
-  public query func addTodo(description: Text) : async Nat {
-    let id = nextId;
-    todos.put(id, {description = description; completed = false});
-    nextId += 1;
-    id
-  };
-  // update ataması
-  public func completeTodo(id: Nat): async () {
-    ignore do ? {
-      let description = todos.get(id)!.description;
-      todos.put(id,{description; completed =  true});
-    }
-  };
-
-  public query func showTodos(): async Text {
-
-    var output : Text = "\n__TO-DOs__\n";
-    for (todo: ToDo in todos.vals()){
-      output #= "\n" # todo.description;
-      if (todo.completed){output #= "✓" ; };
-    };
-    output # "\n"
-  };
-
-  public func  clearCompleted() : async () {
-    todos := Map.mapFilter<Nat , ToDo , ToDo>(todos, Nat.equal , natHash,
-    func(_, todo){if(todo.completed) null else ?todo});
-  };
+// Tüm yapılacak işleri görüntüler
+public func showTodos(todoList : TodoList) : Text {
+    let header = "___TO-DOs___\n";
+    let todos = Array.foldi<Todo, Text>(todoList.todos, "", func(i, acc, todo) {
+        let status = if todo.completed then "✔" else "";
+        acc # "(" # Nat.toText(i + 1) # ") " # todo.description # " " # status # "\n"
+    });
+    header # todos
+};
 
 }
